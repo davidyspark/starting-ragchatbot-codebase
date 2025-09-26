@@ -219,3 +219,152 @@ Lesson Link: https://example.com/lesson1
 This lesson covers more advanced topics in the subject.
 You will learn about complex implementations and best practices.
 """
+
+
+# API Testing Fixtures
+
+@pytest.fixture
+def mock_rag_system():
+    """Mock RAG system for API testing"""
+    mock_rag = Mock()
+
+    # Mock query method
+    mock_rag.query.return_value = (
+        "This is a test response from the RAG system.",
+        ["Test Course"],
+        ["https://example.com/course"]
+    )
+
+    # Mock session manager
+    mock_session_manager = Mock()
+    mock_session_manager.create_session.return_value = "test-session-123"
+    mock_rag.session_manager = mock_session_manager
+
+    # Mock course analytics
+    mock_rag.get_course_analytics.return_value = {
+        "total_courses": 2,
+        "course_titles": ["Test Course 1", "Test Course 2"]
+    }
+
+    return mock_rag
+
+
+@pytest.fixture
+def test_client(mock_rag_system):
+    """Create FastAPI test client with mocked dependencies"""
+    from fastapi.testclient import TestClient
+
+    # Create a test app without static file mounting to avoid frontend dependency
+    from fastapi import FastAPI, HTTPException
+    from fastapi.middleware.cors import CORSMiddleware
+    from pydantic import BaseModel
+    from typing import List, Optional
+
+    # Create test app
+    test_app = FastAPI(title="Test RAG System")
+
+    # Add CORS middleware
+    test_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Pydantic models
+    class QueryRequest(BaseModel):
+        query: str
+        session_id: Optional[str] = None
+
+    class QueryResponse(BaseModel):
+        answer: str
+        sources: List[str]
+        source_links: List[Optional[str]]
+        session_id: str
+
+    class CourseStats(BaseModel):
+        total_courses: int
+        course_titles: List[str]
+
+    # API endpoints with mocked RAG system
+    @test_app.post("/api/query", response_model=QueryResponse)
+    async def query_documents(request: QueryRequest):
+        try:
+            session_id = request.session_id
+            if not session_id:
+                session_id = mock_rag_system.session_manager.create_session()
+
+            answer, sources, source_links = mock_rag_system.query(request.query, session_id)
+
+            return QueryResponse(
+                answer=answer,
+                sources=sources,
+                source_links=source_links,
+                session_id=session_id
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @test_app.get("/api/courses", response_model=CourseStats)
+    async def get_course_stats():
+        try:
+            analytics = mock_rag_system.get_course_analytics()
+            return CourseStats(
+                total_courses=analytics["total_courses"],
+                course_titles=analytics["course_titles"]
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @test_app.get("/")
+    async def root():
+        return {"message": "Test RAG API"}
+
+    return TestClient(test_app)
+
+
+@pytest.fixture
+def sample_query_requests():
+    """Sample API request payloads for testing"""
+    return {
+        "basic_query": {
+            "query": "What is machine learning?",
+            "session_id": None
+        },
+        "with_session": {
+            "query": "Tell me more about that topic",
+            "session_id": "existing-session-123"
+        },
+        "empty_query": {
+            "query": "",
+            "session_id": None
+        },
+        "long_query": {
+            "query": "What is " + "machine learning " * 100,
+            "session_id": None
+        }
+    }
+
+
+@pytest.fixture
+def mock_api_responses():
+    """Mock API response data for testing"""
+    return {
+        "successful_query": {
+            "answer": "Machine learning is a subset of artificial intelligence.",
+            "sources": ["AI Course", "ML Basics"],
+            "source_links": ["https://example.com/ai", "https://example.com/ml"],
+            "session_id": "session-123"
+        },
+        "no_results": {
+            "answer": "I couldn't find any relevant information about that topic.",
+            "sources": [],
+            "source_links": [],
+            "session_id": "session-123"
+        },
+        "course_stats": {
+            "total_courses": 3,
+            "course_titles": ["AI Course", "ML Basics", "Deep Learning"]
+        }
+    }
