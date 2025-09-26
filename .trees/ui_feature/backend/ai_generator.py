@@ -1,9 +1,9 @@
 import anthropic
-from typing import List, Optional, Dict, Any
+
 
 class AIGenerator:
     """Handles interactions with Anthropic's Claude API for generating responses"""
-    
+
     # Static system prompt to avoid rebuilding on each call
     SYSTEM_PROMPT = """ You are an AI assistant specialized in course materials and educational content with access to comprehensive search tools for course information.
 
@@ -37,22 +37,21 @@ All responses must be:
 4. **Example-supported** - Include relevant examples when they aid understanding
 Provide only the direct answer to what was asked.
 """
-    
+
     def __init__(self, api_key: str, model: str):
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
-        
+
         # Pre-build base API parameters
-        self.base_params = {
-            "model": self.model,
-            "temperature": 0,
-            "max_tokens": 800
-        }
-    
-    def generate_response(self, query: str,
-                         conversation_history: Optional[str] = None,
-                         tools: Optional[List] = None,
-                         tool_manager=None) -> str:
+        self.base_params = {"model": self.model, "temperature": 0, "max_tokens": 800}
+
+    def generate_response(
+        self,
+        query: str,
+        conversation_history: str | None = None,
+        tools: list | None = None,
+        tool_manager=None,
+    ) -> str:
         """
         Generate AI response with up to 2 rounds of sequential tool usage.
 
@@ -79,7 +78,9 @@ Provide only the direct answer to what was asked.
 
             # Process up to 2 rounds
             for round_num in range(1, 3):  # 1 and 2
-                response = self._execute_round(messages, system_content, tools, tool_manager, round_num)
+                response = self._execute_round(
+                    messages, system_content, tools, tool_manager, round_num
+                )
 
                 # If we got a final text response, return it
                 if isinstance(response, str):
@@ -104,9 +105,15 @@ Provide only the direct answer to what was asked.
         except Exception as e:
             # Fallback to simple response without tools
             return self._fallback_response(query, conversation_history, str(e))
-    
-    def _execute_round(self, messages: List[Dict], system_content: str,
-                      tools: Optional[List], tool_manager, round_num: int):
+
+    def _execute_round(
+        self,
+        messages: list[dict],
+        system_content: str,
+        tools: list | None,
+        tool_manager,
+        round_num: int,
+    ):
         """
         Execute a single round of the conversation.
 
@@ -124,7 +131,7 @@ Provide only the direct answer to what was asked.
         api_params = {
             **self.base_params,
             "messages": messages,
-            "system": system_content
+            "system": system_content,
         }
 
         # Add tools if available and we haven't exceeded max rounds
@@ -141,7 +148,7 @@ Provide only the direct answer to what was asked.
         # Return final text response
         return response.content[0].text
 
-    def _execute_tools(self, response, tool_manager) -> Optional[List[Dict]]:
+    def _execute_tools(self, response, tool_manager) -> list[dict] | None:
         """
         Execute all tool calls and return formatted results.
 
@@ -160,26 +167,29 @@ Provide only the direct answer to what was asked.
             if content_block.type == "tool_use":
                 try:
                     tool_result = tool_manager.execute_tool(
-                        content_block.name,
-                        **content_block.input
+                        content_block.name, **content_block.input
                     )
 
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": content_block.id,
-                        "content": tool_result
-                    })
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": content_block.id,
+                            "content": tool_result,
+                        }
+                    )
                 except Exception as e:
                     # Handle tool execution errors gracefully
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": content_block.id,
-                        "content": f"Tool execution error: {str(e)}"
-                    })
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": content_block.id,
+                            "content": f"Tool execution error: {str(e)}",
+                        }
+                    )
 
         return tool_results if tool_results else None
 
-    def _execute_final_round(self, messages: List[Dict], system_content: str) -> str:
+    def _execute_final_round(self, messages: list[dict], system_content: str) -> str:
         """
         Execute final round without tools for response synthesis.
 
@@ -193,15 +203,19 @@ Provide only the direct answer to what was asked.
         final_params = {
             **self.base_params,
             "messages": messages,
-            "system": system_content
+            "system": system_content,
             # Deliberately no tools - force final synthesis
         }
 
         final_response = self.client.messages.create(**final_params)
         return final_response.content[0].text
 
-    def _fallback_response(self, query: str, conversation_history: Optional[str] = None,
-                          error: Optional[str] = None) -> str:
+    def _fallback_response(
+        self,
+        query: str,
+        conversation_history: str | None = None,
+        error: str | None = None,
+    ) -> str:
         """
         Fallback response generation without tools.
 
@@ -223,9 +237,9 @@ Provide only the direct answer to what was asked.
             response = self.client.messages.create(
                 **self.base_params,
                 messages=[{"role": "user", "content": query}],
-                system=system_content
+                system=system_content,
                 # No tools - simple response only
             )
             return response.content[0].text
-        except Exception as e:
-            return f"I encountered an error processing your request. Please try again."
+        except Exception:
+            return "I encountered an error processing your request. Please try again."

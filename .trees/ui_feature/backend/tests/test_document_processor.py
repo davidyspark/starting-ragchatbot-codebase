@@ -1,8 +1,8 @@
-import pytest
-import tempfile
 import os
+
+import pytest
 from document_processor import DocumentProcessor
-from models import Course, Lesson, CourseChunk
+from models import CourseChunk
 
 
 class TestDocumentProcessor:
@@ -20,7 +20,7 @@ class TestDocumentProcessor:
         test_file = os.path.join(temp_dir, "test.txt")
         content = "Test content with UTF-8 characters: café, résumé, naïve"
 
-        with open(test_file, 'w', encoding='utf-8') as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write(content)
 
         processor = DocumentProcessor(100, 20)
@@ -32,7 +32,7 @@ class TestDocumentProcessor:
         test_file = os.path.join(temp_dir, "test.txt")
 
         # Write binary data that might cause encoding issues
-        with open(test_file, 'wb') as f:
+        with open(test_file, "wb") as f:
             f.write(b"Normal text\xff\xfe and some problematic bytes")
 
         processor = DocumentProcessor(100, 20)
@@ -95,7 +95,7 @@ class TestDocumentProcessor:
         """Test parsing a valid course document"""
         # Write sample document to file
         test_file = os.path.join(temp_dir, "test_course.txt")
-        with open(test_file, 'w', encoding='utf-8') as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write(sample_course_document)
 
         processor = DocumentProcessor(chunk_size=100, chunk_overlap=20)
@@ -129,7 +129,7 @@ Lesson 0: Introduction
 Some content here.
 """
         test_file = os.path.join(temp_dir, "invalid.txt")
-        with open(test_file, 'w', encoding='utf-8') as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write(invalid_document)
 
         processor = DocumentProcessor(100, 20)
@@ -152,7 +152,7 @@ Course Instructor: Test Instructor
 Some general course description without lessons.
 """
         test_file = os.path.join(temp_dir, "no_lessons.txt")
-        with open(test_file, 'w', encoding='utf-8') as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write(document_no_lessons)
 
         processor = DocumentProcessor(100, 20)
@@ -180,7 +180,7 @@ In this lesson, you'll learn how to make your first API call to Claude. We'll st
 """
 
         test_file = os.path.join(temp_dir, "real_course.txt")
-        with open(test_file, 'w', encoding='utf-8') as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write(real_document)
 
         processor = DocumentProcessor(chunk_size=200, chunk_overlap=50)
@@ -211,7 +211,7 @@ In this lesson, you'll learn how to make your first API call to Claude. We'll st
     def test_create_course_chunks(self, temp_dir, sample_course_document):
         """Test chunk creation from parsed course"""
         test_file = os.path.join(temp_dir, "test.txt")
-        with open(test_file, 'w', encoding='utf-8') as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write(sample_course_document)
 
         processor = DocumentProcessor(chunk_size=50, chunk_overlap=10)
@@ -232,7 +232,7 @@ In this lesson, you'll learn how to make your first API call to Claude. We'll st
     def test_empty_file_handling(self, temp_dir):
         """Test handling of empty files"""
         test_file = os.path.join(temp_dir, "empty.txt")
-        with open(test_file, 'w', encoding='utf-8') as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write("")
 
         processor = DocumentProcessor(100, 20)
@@ -261,7 +261,7 @@ Lesson 1: Valid lesson
 Valid content here.
 """
         test_file = os.path.join(temp_dir, "malformed.txt")
-        with open(test_file, 'w', encoding='utf-8') as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write(malformed_document)
 
         processor = DocumentProcessor(100, 20)
@@ -302,7 +302,7 @@ Valid content here.
             processor = DocumentProcessor(chunk_size=800, chunk_overlap=100)
 
             for filename in os.listdir(docs_path):
-                if filename.endswith('.txt'):
+                if filename.endswith(".txt"):
                     file_path = os.path.join(docs_path, filename)
                     try:
                         course, chunks = processor.process_course_document(file_path)

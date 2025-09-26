@@ -1,25 +1,25 @@
-import pytest
-import tempfile
-import shutil
-from unittest.mock import Mock, MagicMock
-from typing import Generator
 import os
+import shutil
 import sys
+import tempfile
+from collections.abc import Generator
+from unittest.mock import MagicMock, Mock
+
+import pytest
 
 # Add backend directory to path so tests can import modules
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, backend_dir)
 
-from vector_store import VectorStore, SearchResults
-from ai_generator import AIGenerator
-from document_processor import DocumentProcessor
-from search_tools import CourseSearchTool, CourseOutlineTool, ToolManager
-from models import Course, Lesson, CourseChunk
 from config import Config
+from document_processor import DocumentProcessor
+from models import Course, CourseChunk, Lesson
+from search_tools import CourseOutlineTool, CourseSearchTool, ToolManager
+from vector_store import SearchResults, VectorStore
 
 
 @pytest.fixture
-def temp_dir() -> Generator[str, None, None]:
+def temp_dir() -> Generator[str]:
     """Create a temporary directory for test databases"""
     temp_dir = tempfile.mkdtemp()
     yield temp_dir
@@ -45,10 +45,7 @@ def mock_vector_store() -> Mock:
 
     # Mock search method to return empty results by default
     mock_store.search.return_value = SearchResults(
-        documents=[],
-        metadata=[],
-        distances=[],
-        error=None
+        documents=[], metadata=[], distances=[], error=None
     )
 
     # Mock other methods
@@ -68,20 +65,20 @@ def sample_course() -> Course:
         Lesson(
             lesson_number=0,
             title="Introduction",
-            lesson_link="https://example.com/lesson0"
+            lesson_link="https://example.com/lesson0",
         ),
         Lesson(
             lesson_number=1,
             title="Basic Concepts",
-            lesson_link="https://example.com/lesson1"
-        )
+            lesson_link="https://example.com/lesson1",
+        ),
     ]
 
     return Course(
         title="Test Course",
         course_link="https://example.com/course",
         instructor="Test Instructor",
-        lessons=lessons
+        lessons=lessons,
     )
 
 
@@ -93,26 +90,30 @@ def sample_course_chunks(sample_course: Course) -> list[CourseChunk]:
     # Create some sample content for each lesson (since Lesson model doesn't have content field)
     lesson_contents = {
         0: "Welcome to this course about testing. This lesson introduces basic concepts of testing frameworks and methodologies.",
-        1: "This lesson covers basic concepts of testing frameworks. We explore unit testing, integration testing, and best practices."
+        1: "This lesson covers basic concepts of testing frameworks. We explore unit testing, integration testing, and best practices.",
     }
 
     for lesson in sample_course.lessons:
-        lesson_content = lesson_contents.get(lesson.lesson_number, f"Content for lesson {lesson.lesson_number}")
+        lesson_content = lesson_contents.get(
+            lesson.lesson_number, f"Content for lesson {lesson.lesson_number}"
+        )
 
         # Split lesson content into smaller chunks for testing
         words = lesson_content.split()
         chunk_size = 5  # 5 words per chunk for testing
 
         for i in range(0, len(words), chunk_size):
-            chunk_words = words[i:i + chunk_size]
+            chunk_words = words[i : i + chunk_size]
             chunk_content = " ".join(chunk_words)
 
-            chunks.append(CourseChunk(
-                course_title=sample_course.title,
-                lesson_number=lesson.lesson_number,
-                content=chunk_content,
-                chunk_index=len(chunks)
-            ))
+            chunks.append(
+                CourseChunk(
+                    course_title=sample_course.title,
+                    lesson_number=lesson.lesson_number,
+                    content=chunk_content,
+                    chunk_index=len(chunks),
+                )
+            )
 
     return chunks
 
@@ -139,42 +140,27 @@ def sample_search_results() -> SearchResults:
     return SearchResults(
         documents=[
             "This is a sample document about testing.",
-            "Another document with testing information."
+            "Another document with testing information.",
         ],
         metadata=[
-            {
-                "course_title": "Test Course",
-                "lesson_number": 0,
-                "chunk_index": 0
-            },
-            {
-                "course_title": "Test Course",
-                "lesson_number": 1,
-                "chunk_index": 1
-            }
+            {"course_title": "Test Course", "lesson_number": 0, "chunk_index": 0},
+            {"course_title": "Test Course", "lesson_number": 1, "chunk_index": 1},
         ],
-        distances=[0.1, 0.15]
+        distances=[0.1, 0.15],
     )
 
 
 @pytest.fixture
 def empty_search_results() -> SearchResults:
     """Create empty search results for testing"""
-    return SearchResults(
-        documents=[],
-        metadata=[],
-        distances=[]
-    )
+    return SearchResults(documents=[], metadata=[], distances=[])
 
 
 @pytest.fixture
 def error_search_results() -> SearchResults:
     """Create error search results for testing"""
     return SearchResults(
-        documents=[],
-        metadata=[],
-        distances=[],
-        error="Test search error"
+        documents=[], metadata=[], distances=[], error="Test search error"
     )
 
 

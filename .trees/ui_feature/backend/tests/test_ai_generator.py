@@ -1,7 +1,7 @@
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, MagicMock, patch
 from ai_generator import AIGenerator
-from search_tools import ToolManager, CourseSearchTool
 
 
 class TestAIGenerator:
@@ -16,7 +16,7 @@ class TestAIGenerator:
         assert generator.base_params["temperature"] == 0
         assert generator.base_params["max_tokens"] == 800
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_generate_response_without_tools(self, mock_anthropic_class):
         """Test basic response generation without tools"""
         mock_client = MagicMock()
@@ -35,7 +35,7 @@ class TestAIGenerator:
         assert result == "This is a test response."
         mock_client.messages.create.assert_called_once()
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_generate_response_with_conversation_history(self, mock_anthropic_class):
         """Test response generation with conversation history"""
         mock_client = MagicMock()
@@ -49,8 +49,7 @@ class TestAIGenerator:
 
         generator = AIGenerator("test-api-key", "claude-sonnet-4-20250514")
         result = generator.generate_response(
-            "Follow-up query",
-            conversation_history="Previous conversation context"
+            "Follow-up query", conversation_history="Previous conversation context"
         )
 
         assert result == "Response with history."
@@ -59,7 +58,7 @@ class TestAIGenerator:
         call_args = mock_client.messages.create.call_args[1]
         assert "Previous conversation context" in call_args["system"]
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_generate_response_with_tools_no_tool_use(self, mock_anthropic_class):
         """Test response generation with tools available but not used"""
         mock_client = MagicMock()
@@ -77,9 +76,7 @@ class TestAIGenerator:
 
         generator = AIGenerator("test-api-key", "claude-sonnet-4-20250514")
         result = generator.generate_response(
-            "General knowledge query",
-            tools=mock_tools,
-            tool_manager=mock_tool_manager
+            "General knowledge query", tools=mock_tools, tool_manager=mock_tool_manager
         )
 
         assert result == "Direct answer without tools."
@@ -89,7 +86,7 @@ class TestAIGenerator:
         assert "tools" in call_args
         assert call_args["tools"] == mock_tools
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_generate_response_with_tool_use(self, mock_anthropic_class):
         """Test response generation when AI decides to use a tool"""
         mock_client = MagicMock()
@@ -102,9 +99,7 @@ class TestAIGenerator:
         mock_tool_response.content[0].type = "tool_use"
         mock_tool_response.content[0].name = "search_course_content"
         mock_tool_response.content[0].id = "tool_call_123"
-        mock_tool_response.content[0].input = {
-            "query": "What is computer use?"
-        }
+        mock_tool_response.content[0].input = {"query": "What is computer use?"}
 
         # Second response: Final answer after tool execution
         mock_final_response = MagicMock()
@@ -112,7 +107,10 @@ class TestAIGenerator:
         mock_final_response.content[0].text = "Based on the search, computer use is..."
 
         # Setup mock to return different responses on different calls
-        mock_client.messages.create.side_effect = [mock_tool_response, mock_final_response]
+        mock_client.messages.create.side_effect = [
+            mock_tool_response,
+            mock_final_response,
+        ]
 
         # Mock tool manager
         mock_tool_manager = Mock()
@@ -122,15 +120,12 @@ class TestAIGenerator:
 
         generator = AIGenerator("test-api-key", "claude-sonnet-4-20250514")
         result = generator.generate_response(
-            "What is computer use?",
-            tools=mock_tools,
-            tool_manager=mock_tool_manager
+            "What is computer use?", tools=mock_tools, tool_manager=mock_tool_manager
         )
 
         # Verify tool was executed
         mock_tool_manager.execute_tool.assert_called_once_with(
-            "search_course_content",
-            query="What is computer use?"
+            "search_course_content", query="What is computer use?"
         )
 
         # Verify final response
@@ -139,7 +134,7 @@ class TestAIGenerator:
         # Verify two API calls were made
         assert mock_client.messages.create.call_count == 2
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_tool_execution_flow(self, mock_anthropic_class):
         """Test the detailed flow of tool execution"""
         mock_client = MagicMock()
@@ -161,7 +156,10 @@ class TestAIGenerator:
         mock_final_response.content = [MagicMock()]
         mock_final_response.content[0].text = "Final answer"
 
-        mock_client.messages.create.side_effect = [mock_tool_response, mock_final_response]
+        mock_client.messages.create.side_effect = [
+            mock_tool_response,
+            mock_final_response,
+        ]
 
         # Mock tool manager
         mock_tool_manager = Mock()
@@ -170,19 +168,23 @@ class TestAIGenerator:
         generator = AIGenerator("test-api-key", "claude-sonnet-4-20250514")
         result = generator._handle_tool_execution(
             mock_tool_response,
-            {"messages": [{"role": "user", "content": "test"}], "system": "system prompt"},
-            mock_tool_manager
+            {
+                "messages": [{"role": "user", "content": "test"}],
+                "system": "system prompt",
+            },
+            mock_tool_manager,
         )
 
         # Verify tool execution
         mock_tool_manager.execute_tool.assert_called_once_with(
-            "search_course_content",
-            query="test query"
+            "search_course_content", query="test query"
         )
 
         # Verify second API call structure
         second_call_args = mock_client.messages.create.call_args_list[1][1]
-        assert len(second_call_args["messages"]) == 3  # Original + assistant + tool result
+        assert (
+            len(second_call_args["messages"]) == 3
+        )  # Original + assistant + tool result
 
         assert result == "Final answer"
 
@@ -194,7 +196,7 @@ class TestAIGenerator:
         assert "search_course_content" in AIGenerator.SYSTEM_PROMPT
         assert "get_course_outline" in AIGenerator.SYSTEM_PROMPT
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_api_error_handling(self, mock_anthropic_class):
         """Test handling of API errors"""
         mock_client = MagicMock()
@@ -202,6 +204,7 @@ class TestAIGenerator:
 
         # Mock API exception
         import anthropic
+
         mock_client.messages.create.side_effect = anthropic.APIError("API Error")
 
         generator = AIGenerator("test-api-key", "claude-sonnet-4-20250514")
@@ -209,7 +212,7 @@ class TestAIGenerator:
         with pytest.raises(anthropic.APIError):
             generator.generate_response("Test query")
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_tool_execution_with_multiple_tools(self, mock_anthropic_class):
         """Test execution when multiple tools are called in one response"""
         mock_client = MagicMock()
@@ -240,20 +243,20 @@ class TestAIGenerator:
         mock_final_response.content = [MagicMock()]
         mock_final_response.content[0].text = "Combined results"
 
-        mock_client.messages.create.side_effect = [mock_tool_response, mock_final_response]
+        mock_client.messages.create.side_effect = [
+            mock_tool_response,
+            mock_final_response,
+        ]
 
         # Mock tool manager
         mock_tool_manager = Mock()
-        mock_tool_manager.execute_tool.side_effect = [
-            "Search result",
-            "Outline result"
-        ]
+        mock_tool_manager.execute_tool.side_effect = ["Search result", "Outline result"]
 
         generator = AIGenerator("test-api-key", "claude-sonnet-4-20250514")
         result = generator._handle_tool_execution(
             mock_tool_response,
             {"messages": [{"role": "user", "content": "test"}], "system": "system"},
-            mock_tool_manager
+            mock_tool_manager,
         )
 
         # Verify both tools were executed
@@ -269,7 +272,7 @@ class TestAIGenerator:
 
         assert result == "Combined results"
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_empty_tool_results(self, mock_anthropic_class):
         """Test handling when tool returns empty results"""
         mock_client = MagicMock()
@@ -289,7 +292,10 @@ class TestAIGenerator:
         mock_final_response.content = [MagicMock()]
         mock_final_response.content[0].text = "No results found."
 
-        mock_client.messages.create.side_effect = [mock_tool_response, mock_final_response]
+        mock_client.messages.create.side_effect = [
+            mock_tool_response,
+            mock_final_response,
+        ]
 
         # Mock tool manager returning empty result (current system behavior)
         mock_tool_manager = Mock()
@@ -299,7 +305,7 @@ class TestAIGenerator:
         result = generator._handle_tool_execution(
             mock_tool_response,
             {"messages": [{"role": "user", "content": "test"}], "system": "system"},
-            mock_tool_manager
+            mock_tool_manager,
         )
 
         # This test reveals what happens in the current failing scenario
@@ -309,7 +315,7 @@ class TestAIGenerator:
 class TestSequentialToolCalling:
     """Test cases for sequential tool calling functionality"""
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_single_round_termination(self, mock_anthropic_class):
         """Test that single tool use terminates correctly"""
         mock_client = MagicMock()
@@ -330,7 +336,10 @@ class TestSequentialToolCalling:
         mock_final_response.content[0].text = "Final answer after tool use."
         mock_final_response.stop_reason = "end_turn"
 
-        mock_client.messages.create.side_effect = [mock_tool_response, mock_final_response]
+        mock_client.messages.create.side_effect = [
+            mock_tool_response,
+            mock_final_response,
+        ]
 
         # Mock tool manager
         mock_tool_manager = Mock()
@@ -340,14 +349,14 @@ class TestSequentialToolCalling:
         result = generator.generate_response(
             "Test query",
             tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Verify single round termination
         assert result == "Final answer after tool use."
         assert mock_client.messages.create.call_count == 2  # Tool round + final round
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_two_round_execution(self, mock_anthropic_class):
         """Test full two-round execution"""
         mock_client = MagicMock()
@@ -377,20 +386,23 @@ class TestSequentialToolCalling:
         mock_final_response.content[0].text = "Combined results from both tools."
 
         mock_client.messages.create.side_effect = [
-            mock_tool_response_1, mock_tool_response_2, mock_final_response
+            mock_tool_response_1,
+            mock_tool_response_2,
+            mock_final_response,
         ]
 
         # Mock tool manager
         mock_tool_manager = Mock()
         mock_tool_manager.execute_tool.side_effect = [
-            "Course outline result", "Content search result"
+            "Course outline result",
+            "Content search result",
         ]
 
         generator = AIGenerator("test-api-key", "claude-sonnet-4-20250514")
         result = generator.generate_response(
             "Find course with same topic as lesson 4 of Test Course",
             tools=[{"name": "get_course_outline"}, {"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Verify two-round execution + final synthesis
@@ -398,7 +410,7 @@ class TestSequentialToolCalling:
         assert mock_client.messages.create.call_count == 3  # 2 tool rounds + final
         assert mock_tool_manager.execute_tool.call_count == 2
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_max_rounds_termination(self, mock_anthropic_class):
         """Test termination after 2 rounds regardless of continued tool requests"""
         mock_client = MagicMock()
@@ -428,7 +440,9 @@ class TestSequentialToolCalling:
         mock_final_response.content[0].text = "Final synthesis after max rounds."
 
         mock_client.messages.create.side_effect = [
-            mock_tool_response_1, mock_tool_response_2, mock_final_response
+            mock_tool_response_1,
+            mock_tool_response_2,
+            mock_final_response,
         ]
 
         mock_tool_manager = Mock()
@@ -438,14 +452,14 @@ class TestSequentialToolCalling:
         result = generator.generate_response(
             "Complex query needing multiple searches",
             tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Should terminate after 2 rounds + final synthesis
         assert result == "Final synthesis after max rounds."
         assert mock_client.messages.create.call_count == 3
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_tool_execution_error_handling(self, mock_anthropic_class):
         """Test graceful handling of tool execution errors"""
         mock_client = MagicMock()
@@ -466,7 +480,10 @@ class TestSequentialToolCalling:
         mock_final_response.content[0].text = "Handled error gracefully."
         mock_final_response.stop_reason = "end_turn"
 
-        mock_client.messages.create.side_effect = [mock_tool_response, mock_final_response]
+        mock_client.messages.create.side_effect = [
+            mock_tool_response,
+            mock_final_response,
+        ]
 
         # Mock tool execution error
         mock_tool_manager = Mock()
@@ -476,7 +493,7 @@ class TestSequentialToolCalling:
         result = generator.generate_response(
             "Test query",
             tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Should handle error and continue
@@ -488,7 +505,7 @@ class TestSequentialToolCalling:
         tool_result_message = messages[2]["content"][0]
         assert "Tool execution error: Tool failed" in tool_result_message["content"]
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_fallback_behavior(self, mock_anthropic_class):
         """Test fallback when API calls fail"""
         mock_client = MagicMock()
@@ -497,7 +514,7 @@ class TestSequentialToolCalling:
         # First call fails, fallback succeeds
         mock_client.messages.create.side_effect = [
             Exception("API Error"),
-            MagicMock(content=[MagicMock(text="Fallback response")])
+            MagicMock(content=[MagicMock(text="Fallback response")]),
         ]
 
         generator = AIGenerator("test-api-key", "claude-sonnet-4-20250514")
@@ -506,7 +523,7 @@ class TestSequentialToolCalling:
         # Should use fallback
         assert result == "Fallback response"
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_conversation_history_preservation(self, mock_anthropic_class):
         """Test that conversation history is maintained across rounds"""
         mock_client = MagicMock()
@@ -527,7 +544,10 @@ class TestSequentialToolCalling:
         mock_final_response.content[0].text = "Final response"
         mock_final_response.stop_reason = "end_turn"
 
-        mock_client.messages.create.side_effect = [mock_tool_response, mock_final_response]
+        mock_client.messages.create.side_effect = [
+            mock_tool_response,
+            mock_final_response,
+        ]
 
         mock_tool_manager = Mock()
         mock_tool_manager.execute_tool.return_value = "Tool result"
@@ -537,7 +557,7 @@ class TestSequentialToolCalling:
             "Test query",
             conversation_history="Previous conversation",
             tools=[{"name": "search_course_content"}],
-            tool_manager=mock_tool_manager
+            tool_manager=mock_tool_manager,
         )
 
         # Verify history included in both API calls

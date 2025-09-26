@@ -1,9 +1,9 @@
-import pytest
 import os
-import tempfile
-from unittest.mock import Mock, patch, MagicMock
-from rag_system import RAGSystem
+from unittest.mock import MagicMock, patch
+
+import pytest
 from config import Config
+from rag_system import RAGSystem
 
 
 class TestRAGSystem:
@@ -37,7 +37,7 @@ Lesson Link: https://example.com/lesson1
 In this lesson, we dive deeper into advanced testing concepts including mocking, stubbing, and test doubles. These techniques help isolate components during testing and ensure reliable test results.
 """
         test_file = os.path.join(temp_dir, "test_course.txt")
-        with open(test_file, 'w', encoding='utf-8') as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write(course_content)
         return test_file
 
@@ -88,7 +88,7 @@ Lesson 1: Advanced Topics {i}
 Advanced content for course {i}.
 """
             test_file = os.path.join(temp_dir, f"course{i}.txt")
-            with open(test_file, 'w', encoding='utf-8') as f:
+            with open(test_file, "w", encoding="utf-8") as f:
                 f.write(course_content)
 
         rag_system = RAGSystem(test_rag_config)
@@ -112,7 +112,7 @@ Lesson 0: Existing Lesson
 This is existing content.
 """
         test_file = os.path.join(temp_dir, "existing.txt")
-        with open(test_file, 'w', encoding='utf-8') as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write(course_content)
 
         rag_system = RAGSystem(test_rag_config)
@@ -123,7 +123,9 @@ This is existing content.
         assert chunks_added1 > 0
 
         # Try to add same course again (simulates restart scenario)
-        courses_added2, chunks_added2 = rag_system.add_course_folder(temp_dir, clear_existing=False)
+        courses_added2, chunks_added2 = rag_system.add_course_folder(
+            temp_dir, clear_existing=False
+        )
 
         # This should skip the course since it already exists
         assert courses_added2 == 0
@@ -132,8 +134,10 @@ This is existing content.
         # This is the problematic behavior! If chunks were lost somehow,
         # they won't be re-added because the course title exists in catalog.
 
-    @patch('ai_generator.anthropic.Anthropic')
-    def test_query_with_content_search(self, mock_anthropic_class, test_rag_config, test_course_file):
+    @patch("ai_generator.anthropic.Anthropic")
+    def test_query_with_content_search(
+        self, mock_anthropic_class, test_rag_config, test_course_file
+    ):
         """Test querying with content that should trigger tool use"""
         # Setup mock Anthropic responses
         mock_client = MagicMock()
@@ -151,23 +155,33 @@ This is existing content.
         # Second response: Final answer
         mock_final_response = MagicMock()
         mock_final_response.content = [MagicMock()]
-        mock_final_response.content[0].text = "Integration testing is crucial for ensuring components work together."
+        mock_final_response.content[0].text = (
+            "Integration testing is crucial for ensuring components work together."
+        )
 
-        mock_client.messages.create.side_effect = [mock_tool_response, mock_final_response]
+        mock_client.messages.create.side_effect = [
+            mock_tool_response,
+            mock_final_response,
+        ]
 
         # Setup RAG system with test data
         rag_system = RAGSystem(test_rag_config)
         rag_system.add_course_document(test_course_file)
 
         # Perform query
-        response, sources, source_links = rag_system.query("What is integration testing?")
+        response, sources, source_links = rag_system.query(
+            "What is integration testing?"
+        )
 
         # Verify response
-        assert response == "Integration testing is crucial for ensuring components work together."
+        assert (
+            response
+            == "Integration testing is crucial for ensuring components work together."
+        )
         assert len(sources) > 0  # Should have found sources
         assert "Test Integration Course" in sources[0]
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_query_with_empty_content(self, mock_anthropic_class, test_rag_config):
         """Test the current problematic scenario: query when no content exists"""
         # Setup mock (AI tries to search but gets no results)
@@ -184,9 +198,14 @@ This is existing content.
 
         mock_final_response = MagicMock()
         mock_final_response.content = [MagicMock()]
-        mock_final_response.content[0].text = "I couldn't find any relevant content about that topic."
+        mock_final_response.content[0].text = (
+            "I couldn't find any relevant content about that topic."
+        )
 
-        mock_client.messages.create.side_effect = [mock_tool_response, mock_final_response]
+        mock_client.messages.create.side_effect = [
+            mock_tool_response,
+            mock_final_response,
+        ]
 
         # Setup RAG system with no content (empty vector store)
         rag_system = RAGSystem(test_rag_config)
@@ -198,7 +217,7 @@ This is existing content.
         assert len(sources) == 0  # No sources found
         assert response == "I couldn't find any relevant content about that topic."
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_query_without_tool_use(self, mock_anthropic_class, test_rag_config):
         """Test query that doesn't require tool use (general knowledge)"""
         mock_client = MagicMock()
@@ -222,7 +241,9 @@ This is existing content.
         """Test session management functionality"""
         rag_system = RAGSystem(test_rag_config)
 
-        with patch.object(rag_system.ai_generator, 'generate_response') as mock_generate:
+        with patch.object(
+            rag_system.ai_generator, "generate_response"
+        ) as mock_generate:
             mock_generate.return_value = "Test response"
 
             # First query creates session
@@ -230,13 +251,15 @@ This is existing content.
             assert response1 == "Test response"
 
             # Second query with same session should include history
-            response2, _, _ = rag_system.query("Second query", session_id="test-session")
+            response2, _, _ = rag_system.query(
+                "Second query", session_id="test-session"
+            )
 
             # Verify history was passed (check if generate_response was called with history)
             calls = mock_generate.call_args_list
             if len(calls) > 1:
                 # Second call should include conversation history
-                assert calls[1][1].get('conversation_history') is not None
+                assert calls[1][1].get("conversation_history") is not None
 
     def test_get_course_analytics(self, test_rag_config, test_course_file):
         """Test course analytics"""
@@ -259,13 +282,17 @@ This is existing content.
         rag_system.add_course_document(test_course_file)
 
         # Test search tool directly
-        result = rag_system.tool_manager.execute_tool("search_course_content", query="testing")
+        result = rag_system.tool_manager.execute_tool(
+            "search_course_content", query="testing"
+        )
         assert isinstance(result, str)
         # Should find content since we added a course
         assert len(result) > 0
 
         # Test outline tool directly
-        result = rag_system.tool_manager.execute_tool("get_course_outline", course_name="Test Integration Course")
+        result = rag_system.tool_manager.execute_tool(
+            "get_course_outline", course_name="Test Integration Course"
+        )
         assert isinstance(result, str)
         assert "Test Integration Course" in result
         assert "Lesson 0" in result
@@ -283,25 +310,31 @@ This is existing content.
         assert analytics["total_courses"] == 1
 
         # Test content search works
-        result = rag_system.tool_manager.execute_tool("search_course_content", query="testing")
+        result = rag_system.tool_manager.execute_tool(
+            "search_course_content", query="testing"
+        )
         assert "No relevant content found" not in result
 
         # Now simulate the problematic state: clear content but keep metadata
         # (This simulates what might have happened in the real system)
         rag_system.vector_store.course_content.delete()  # Clear content collection
-        rag_system.vector_store.course_content = rag_system.vector_store._create_collection("course_content")
+        rag_system.vector_store.course_content = (
+            rag_system.vector_store._create_collection("course_content")
+        )
 
         # Course count should still be 1 (metadata exists)
         analytics = rag_system.get_course_analytics()
         assert analytics["total_courses"] == 1
 
         # But content search should return empty results
-        result = rag_system.tool_manager.execute_tool("search_course_content", query="testing")
+        result = rag_system.tool_manager.execute_tool(
+            "search_course_content", query="testing"
+        )
         assert "No relevant content found" in result
 
         # This demonstrates the exact issue in the production system!
 
-    @patch('ai_generator.anthropic.Anthropic')
+    @patch("ai_generator.anthropic.Anthropic")
     def test_error_handling_in_query(self, mock_anthropic_class, test_rag_config):
         """Test error handling in query processing"""
         mock_client = MagicMock()
@@ -309,6 +342,7 @@ This is existing content.
 
         # Mock API exception
         import anthropic
+
         mock_client.messages.create.side_effect = anthropic.APIError("API Error")
 
         rag_system = RAGSystem(test_rag_config)
@@ -327,7 +361,9 @@ This is existing content.
 
         # Clear and reload with clear_existing=True
         folder_path = os.path.dirname(test_course_file)
-        courses_added, chunks_added = rag_system.add_course_folder(folder_path, clear_existing=True)
+        courses_added, chunks_added = rag_system.add_course_folder(
+            folder_path, clear_existing=True
+        )
 
         # Should re-add the course
         assert courses_added == 1
@@ -338,7 +374,9 @@ This is existing content.
         assert analytics["total_courses"] == 1
 
         # And content search should work
-        result = rag_system.tool_manager.execute_tool("search_course_content", query="testing")
+        result = rag_system.tool_manager.execute_tool(
+            "search_course_content", query="testing"
+        )
         assert "No relevant content found" not in result
 
     def test_real_system_simulation(self, test_rag_config):
@@ -349,13 +387,14 @@ This is existing content.
         # Simulate what happens during startup with existing data
         # First, add some metadata directly (as if from a previous run)
         from models import Course, Lesson
+
         existing_course = Course(
             title="Existing Course",
             course_link="https://example.com/existing",
             instructor="Test Instructor",
             lessons=[
                 Lesson(0, "Introduction", "Content here", "https://example.com/l0")
-            ]
+            ],
         )
         rag_system.vector_store.add_course_metadata(existing_course)
 
@@ -366,7 +405,9 @@ This is existing content.
         assert analytics["total_courses"] == 1  # Metadata exists
 
         # But content search should fail
-        result = rag_system.tool_manager.execute_tool("search_course_content", query="anything")
+        result = rag_system.tool_manager.execute_tool(
+            "search_course_content", query="anything"
+        )
         assert "No relevant content found" in result  # No content chunks
 
         # This is exactly the production issue!

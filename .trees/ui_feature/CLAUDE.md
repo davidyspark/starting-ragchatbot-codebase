@@ -20,6 +20,30 @@ uv sync
 
 # Add new dependency
 uv add package-name
+
+# Install dev dependencies (includes quality tools)
+uv sync --group dev
+```
+
+### Code Quality Tools
+```bash
+# Format code with black and fix auto-fixable issues
+./scripts/format.sh
+
+# Run linting checks
+./scripts/lint.sh
+
+# Run tests
+./scripts/test.sh
+
+# Run full quality pipeline (format + lint + test)
+./scripts/quality.sh
+
+# Manual commands
+uv run black backend/ main.py          # Format code
+uv run ruff check backend/ main.py     # Check linting
+uv run ruff check --fix backend/ main.py  # Fix auto-fixable issues
+cd backend && uv run pytest tests/ -v  # Run tests
 ```
 
 ### Environment Setup

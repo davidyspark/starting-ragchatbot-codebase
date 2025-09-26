@@ -5,7 +5,7 @@
     padding: 0;
 }
 
-/* CSS Variables */
+/* CSS Variables - Dark Theme (default) */
 :root {
     --primary-color: #2563eb;
     --primary-hover: #1d4ed8;
@@ -22,6 +22,27 @@
     --focus-ring: rgba(37, 99, 235, 0.2);
     --welcome-bg: #1e3a5f;
     --welcome-border: #2563eb;
+    --code-bg: rgba(0, 0, 0, 0.2);
+    --transition-duration: 0.3s;
+}
+
+/* Light Theme Variables */
+[data-theme="light"] {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --background: #ffffff;
+    --surface: #f8fafc;
+    --surface-hover: #e2e8f0;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
+    --user-message: #2563eb;
+    --assistant-message: #f1f5f9;
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --focus-ring: rgba(37, 99, 235, 0.2);
+    --welcome-bg: #f0f9ff;
+    --welcome-border: #2563eb;
+    --code-bg: rgba(0, 0, 0, 0.08);
 }
 
 /* Base Styles */
@@ -34,6 +55,76 @@ body {
     overflow: hidden;
     margin: 0;
     padding: 0;
+    transition: background-color var(--transition-duration) ease, color var(--transition-duration) ease;
+}
+
+/* Universal transition for theme switching */
+*,
+*::before,
+*::after {
+    transition: background-color var(--transition-duration) ease,
+                color var(--transition-duration) ease,
+                border-color var(--transition-duration) ease,
+                box-shadow var(--transition-duration) ease;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 44px;
+    height: 44px;
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: all var(--transition-duration) ease;
+    box-shadow: var(--shadow);
+}
+
+.theme-toggle:hover {
+    background: var(--surface-hover);
+    border-color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.theme-toggle:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.theme-toggle:active {
+    transform: scale(0.95);
+}
+
+.theme-toggle svg {
+    width: 20px;
+    height: 20px;
+    color: var(--text-primary);
+    transition: transform var(--transition-duration) ease;
+}
+
+.theme-toggle:hover svg {
+    transform: rotate(15deg);
+}
+
+/* Hide sun icon by default (dark theme) */
+.theme-toggle .sun-icon {
+    display: none;
+}
+
+/* Show sun icon in light theme */
+[data-theme="light"] .theme-toggle .sun-icon {
+    display: block;
+}
+
+[data-theme="light"] .theme-toggle .moon-icon {
+    display: none;
 }
 
 /* Container - Full Screen */
@@ -322,7 +413,7 @@ header h1 {
 }
 
 .message-content code {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--code-bg);
     padding: 0.125rem 0.25rem;
     border-radius: 3px;
     font-family: 'Fira Code', 'Consolas', monospace;
@@ -330,7 +421,7 @@ header h1 {
 }
 
 .message-content pre {
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--code-bg);
     padding: 0.75rem;
     border-radius: 4px;
     overflow-x: auto;
@@ -712,6 +803,17 @@ details[open] .suggested-header::before {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .theme-toggle {
+        top: 1rem;
+        right: 1rem;
+        width: 40px;
+        height: 40px;
+    }
+
+    .theme-toggle svg {
+        width: 18px;
+        height: 18px;
+    }
     .main-content {
         flex-direction: column;
     }

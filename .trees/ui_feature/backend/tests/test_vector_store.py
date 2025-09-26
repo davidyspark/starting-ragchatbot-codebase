@@ -1,10 +1,8 @@
-import pytest
 import os
-import tempfile
-import shutil
-from unittest.mock import patch, MagicMock
-from vector_store import VectorStore, SearchResults
-from models import Course, Lesson, CourseChunk
+from unittest.mock import MagicMock, patch
+
+import pytest
+from vector_store import VectorStore
 
 
 class TestVectorStore:
@@ -14,9 +12,7 @@ class TestVectorStore:
         """Test VectorStore initialization"""
         chroma_path = os.path.join(temp_dir, "test_chroma")
         store = VectorStore(
-            chroma_path=chroma_path,
-            embedding_model="all-MiniLM-L6-v2",
-            max_results=5
+            chroma_path=chroma_path, embedding_model="all-MiniLM-L6-v2", max_results=5
         )
 
         assert store.max_results == 5
@@ -77,7 +73,9 @@ class TestVectorStore:
         assert len(results.documents) > 0
         assert len(results.metadata) > 0
 
-    def test_search_with_course_name_filter(self, temp_dir, sample_course, sample_course_chunks):
+    def test_search_with_course_name_filter(
+        self, temp_dir, sample_course, sample_course_chunks
+    ):
         """Test search with course name filtering"""
         chroma_path = os.path.join(temp_dir, "test_chroma")
         store = VectorStore(chroma_path, "all-MiniLM-L6-v2", 5)
@@ -94,7 +92,9 @@ class TestVectorStore:
         assert results.error is not None
         assert "No course found" in results.error
 
-    def test_search_with_lesson_filter(self, temp_dir, sample_course, sample_course_chunks):
+    def test_search_with_lesson_filter(
+        self, temp_dir, sample_course, sample_course_chunks
+    ):
         """Test search with lesson number filtering"""
         chroma_path = os.path.join(temp_dir, "test_chroma")
         store = VectorStore(chroma_path, "all-MiniLM-L6-v2", 5)
@@ -245,7 +245,7 @@ class TestVectorStore:
         link = store.get_course_link("Nonexistent Course")
         assert link is None
 
-    @patch('chromadb.PersistentClient')
+    @patch("chromadb.PersistentClient")
     def test_chromadb_connection_error(self, mock_client_class, temp_dir):
         """Test handling of ChromaDB connection errors"""
         mock_client_class.side_effect = Exception("ChromaDB connection failed")
@@ -254,7 +254,7 @@ class TestVectorStore:
             VectorStore(
                 chroma_path=os.path.join(temp_dir, "test_chroma"),
                 embedding_model="all-MiniLM-L6-v2",
-                max_results=5
+                max_results=5,
             )
 
     def test_search_error_handling(self, temp_dir):
@@ -288,13 +288,12 @@ class TestVectorStore:
 
         # Both filters
         filter_dict = store._build_filter("Test Course", 1)
-        expected = {"$and": [
-            {"course_title": "Test Course"},
-            {"lesson_number": 1}
-        ]}
+        expected = {"$and": [{"course_title": "Test Course"}, {"lesson_number": 1}]}
         assert filter_dict == expected
 
-    def test_real_world_data_inconsistency_detection(self, temp_dir, sample_course, sample_course_chunks):
+    def test_real_world_data_inconsistency_detection(
+        self, temp_dir, sample_course, sample_course_chunks
+    ):
         """Test detection of data inconsistency that mirrors the real system"""
         chroma_path = os.path.join(temp_dir, "test_chroma")
         store = VectorStore(chroma_path, "all-MiniLM-L6-v2", 5)
